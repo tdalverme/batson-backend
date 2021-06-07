@@ -1,0 +1,12 @@
+opencv-python
+imutils
+pydub
+moviepy
+gensim
+IMDbPY
+scikit-learn
+cmake
+dlib
+face-recognition
+SpeechRecognition
+flask
