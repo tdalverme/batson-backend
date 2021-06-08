@@ -1,11 +1,11 @@
 opencv-python
+gunicorn
 imutils
 pydub
 moviepy
 gensim
 IMDbPY
 scikit-learn
-cmake
 dlib
 face-recognition
 SpeechRecognition
