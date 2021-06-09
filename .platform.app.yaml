@@ -17,6 +17,7 @@ dependencies:
 # The hooks executed at various points in the lifecycle of the application.
 hooks:
     build: |
+      curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
       pip install -U pip wheel cmake
       pip install -r requirements.txt
 # The size of the persistent disk of the application (in MB).
