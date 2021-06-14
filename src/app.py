@@ -1,5 +1,3 @@
-# run python server.py
-
 import flask
 from flask import request
 import tempfile
@@ -9,31 +7,23 @@ import json
 import multiprocessing as mp
 
 from werkzeug.utils import secure_filename
-sys.path.insert(1, 'actor-recognition-module')
-sys.path.insert(1, 'audio-module')
-from actor_recognition import *
-from ponderation_by_audio import *
-from audio_utils import *
-from imdb_utils import *
+from actor_recognition_module.util import constant as facerec_constant
+from actor_recognition_module.face_rec.model.facerec_model import FaceRecModel
+from audio_module.audio_utils import *
+from audio_module.ponderation_by_audio import *
+from actor_recognition_module.imdb_utils import *
+from util import constant as app_constant
 
-#####################################################################
-
+###############################################################################################
+    
 app = flask.Flask(__name__)
-app.config["DEBUG"] = True
-app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
-path_base = os.path.dirname(__file__)  # ./batson/backend
-path_image = os.path.join(path_base, 'resources', 'test.jpg')
+model = FaceRecModel('cnn')
 
-ALLOWED_EXTENSIONS_IMAGE = {'png', 'jpg', 'jpeg'}
-ALLOWED_EXTENSIONS_VIDEO = {'mp4'}
-NO_FILE_PART = 400
-FILE_NOT_SELECTED = 404
-
-#####################################################################
+###############################################################################################
 
 def allowed_file(filename):
     return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in [*ALLOWED_EXTENSIONS_IMAGE, *ALLOWED_EXTENSIONS_VIDEO]
+           filename.rsplit('.', 1)[1].lower() in [*app_constant.ALLOWED_EXTENSIONS_IMAGE, *app_constant.ALLOWED_EXTENSIONS_VIDEO]
 
 def process_video(path_video, verbose=False):
     # separar audio de videos
@@ -74,7 +64,7 @@ def process_video(path_video, verbose=False):
     return sims
 
 def process_image(path_image, verbose=False):
-    actors = get_actors_in_image(path_image, 'cnn', verbose = verbose)
+    actors = model.predict(path_image)
     return actors
 
 @app.route('/', methods=['GET'])
@@ -84,27 +74,35 @@ def home():
 @app.route('/upload-file/', methods=['POST'])
 def upload_file():
     if request.method == 'POST':
-        # check if the post request has the file part
         if 'file' not in request.files:
-            return "Error {}: No file part".format(NO_FILE_PART), NO_FILE_PART
+            return "Error {}: No file part".format(app_constant.NO_FILE_PART), app_constant.NO_FILE_PART
 
-        # obtengo el archivo
         uploaded_file = request.files['file']
         
         if uploaded_file.filename == '':
-            return "Error {}: File not selected".format(FILE_NOT_SELECTED), FILE_NOT_SELECTED
+            return "Error {}: File not selected".format(app_constant.FILE_NOT_SELECTED), app_constant.FILE_NOT_SELECTED
 
         if uploaded_file and allowed_file(uploaded_file.filename):
             filename = secure_filename(uploaded_file.filename)
             uploaded_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        if filename.rsplit('.')[1].lower() in ALLOWED_EXTENSIONS_IMAGE:
+        if filename.rsplit('.')[1].lower() in app_constant.ALLOWED_EXTENSIONS_IMAGE:
             res = process_image(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             return json.dumps(res)
 
-        if filename.rsplit('.')[1].lower() in ALLOWED_EXTENSIONS_VIDEO:
+        if filename.rsplit('.')[1].lower() in app_constant.ALLOWED_EXTENSIONS_VIDEO:
             res = process_video(os.path.join(app.config['UPLOAD_FOLDER'], filename), True)
             return json.dumps(res)
 
     else:
-        return "Error 405 Method Not Allowed", 405
+        return "Error %d Method Not Allowed" % app_constant.METHOD_NOT_ALLOWED, app_constant.METHOD_NOT_ALLOWED
+
+###############################################################################################
+
+if __name__ == '__main__':
+    app.config["DEBUG"] = True
+    app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+
+    model.load_from_file(facerec_constant.FACEREC_MODEL_PATH)
+
+    app.run(debug=True, use_reloader=False)
