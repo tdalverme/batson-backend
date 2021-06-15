@@ -92,6 +92,16 @@ class FaceRecModel(MLModel):
                         self.known_encodings.append(encodings)
                         self.known_names.append(names)
 
+    def predict_from_img(self, img):
+        boxes = face_recognition.face_locations(img, model='hog')
+        encodings = face_recognition.face_encodings(img, boxes)
+
+        names = list()
+        if encodings:
+            names = self.__linear_search(encodings)
+
+        return names
+
     def predict(self, img_path):
         """
         Predice la etiqueta o clase de una imagen.\n
@@ -105,7 +115,7 @@ class FaceRecModel(MLModel):
         """
         boxes = list()
         encodings = list()
-
+        
         img = cv2.imread(img_path)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 

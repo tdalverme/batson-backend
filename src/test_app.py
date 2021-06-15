@@ -1,13 +1,14 @@
 # run python test_server.py
 
 import base64
+import time
 import os
 import requests
 from actor_recognition_module.util import constant
 
 #############################################################################
 
-file_path = os.path.join(constant.TEST_FOLDER_PATH, 'johnny_depp_willy_wonka.jpg')
+file_path = os.path.join(constant.TEST_FOLDER_PATH, 'paul_bettany_vision.jpg')
 
 #############################################################################
 
@@ -25,6 +26,8 @@ files = {
     'file': open(file_path, 'rb')
 }
 
+start = time.time()
 res = requests.post(url, files=files)
+print("%.2f" % (time.time() - start), " seconds")
 
 print(res.text)

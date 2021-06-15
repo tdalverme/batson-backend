@@ -1,12 +1,13 @@
+import functools
 import flask
 from flask import request
 import tempfile
-import sys
 import os
 import json
 import multiprocessing as mp
 
 from werkzeug.utils import secure_filename
+from actor_recognition_module.actor_recognition import get_n_frames
 from actor_recognition_module.util import constant as facerec_constant
 from actor_recognition_module.face_rec.model.facerec_model import FaceRecModel
 from audio_module.audio_utils import *
@@ -25,43 +26,28 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in [*app_constant.ALLOWED_EXTENSIONS_IMAGE, *app_constant.ALLOWED_EXTENSIONS_VIDEO]
 
-def process_video(path_video, verbose=False):
-    # separar audio de videos
-    path_audio = separate_audio(path_video)
+def process_video(path_video):
+    # obtener una lista de frames del video
+    frames = get_n_frames(path_video)
 
-    # ejecutar paralelamente reconocimiento de audio y reconocimiento de actores
-    pool = mp.Pool(1)
-    pool2 = mp.Pool(1)
+    # se realiza una prediccion para cada imagen usando multiprocesamiento
+    predict_function = functools.partial(model.predict_from_img)
+    with mp.Pool(2) as pool:
+        names_list = pool.map(predict_function, frames)
 
-    pool.apply_async(audio_to_text, [path_audio, True])
-    actors = pool2.apply_async(get_actors_in_video, [path_video, 'cnn', True])
+    # se crea un diccionario (actor, nro_ocurrencias)
+    # si se predice un actor en más de un frame es más probable que la prediccion sea correcta
+    d = dict()
+    for list in names_list:
+        for name in list:
+            d[name] = 0
 
-    # hay que esperar a que se haya terminado de obtener los actores
-    pool2.close()
-    pool2.join()
+    for list in names_list:
+        for name in list:
+            d[name] += 1
 
-    # iniciar busqueda de peliculas con los actores encontrados
-    # si el reconocimiento de audio no finalizo se ejecuta en paralelo
-    pool2 = mp.Pool(1)
-
-    movies_ids = pool2.apply_async(get_movies_with_actors, [actors, True])
-
-    # hay que esperar a que se haya terminado de obtener las peliculas
-    pool2.close()
-    pool2.join()
-
-    # obtener los plots de cada pelicula
-    plots = get_plots(movies_ids.get(), verbose = verbose)
-    
-    # hay que esperar a que se haya terminado de reconocer el audio
-    pool.close()
-    pool.join()
-    
-    os.remove(path_audio)
-
-    # obtener similitudes de las peliculas con el audio reconocido
-    sims = movie_similarity_by_audio(movies_ids.get(), plots, verbose = verbose)
-    return sims
+    for k, v in d.items():
+        print(k, ":", v)
 
 def process_image(path_image, verbose=False):
     actors = model.predict(path_image)
@@ -91,7 +77,7 @@ def upload_file():
             return json.dumps(res)
 
         if filename.rsplit('.')[1].lower() in app_constant.ALLOWED_EXTENSIONS_VIDEO:
-            res = process_video(os.path.join(app.config['UPLOAD_FOLDER'], filename), True)
+            res = process_video(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             return json.dumps(res)
 
     else:

@@ -3,8 +3,8 @@ import os
 import cv2
 import imutils
 
-from util import constant
-from faceRec import FaceRec
+from util import constant as app_constant
+from actor_recognition_module.util import constant as facerec_constant
 
 ################################################################################################
 
@@ -16,29 +16,21 @@ path_encodings = os.path.join(os.path.dirname(__file__), 'encodings', 'encodings
 def load_model():
     return pickle.loads(open(path_encodings, "rb").read())
 
-def get_actors_in_image(path_image, data, detection_method='hog', verbose=False, threshold=0.6):
-    if verbose:
-        print("[REC-ACT] Iniciando reconocimiento de actores en imagen...")
-
-    names = set()
-
-    image = cv2.imread(path_image)
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-    faceRec = FaceRec()
-
-    if verbose:
-        print("[REC-ACT] Reconociendo caras...")
-    # based on user args select fast kdtree based nn or linear search
-    names.update(faceRec.getAllFacesInImage(image_rgb, detection_method, False,
-                                            data[constant.KNOWN_ENCODINGS], data[constant.ENCODING_STRUCTURE],
-                                            data[constant.KNOWN_NAMES], threshold))
+def get_n_frames(path_video, interval = 1):
+    frames = []
     
-    if verbose:
-        print("[REC-ACT] Caras identificadas.")
-
-    return list(names)
-
+    video = cv2.VideoCapture(path_video)
+    frame_rate = video.get(cv2.CAP_PROP_FPS)
+    success, image = video.read()
+    
+    count = 0
+    while success:
+        frames.append(image)
+        count += interval
+        video.set(1, int(count * frame_rate))
+        success, image = video.read()
+    
+    return frames
 
 def get_actors_in_video(path_video, detection_method='hog', verbose=False, threshold=0.6):
     if verbose:
