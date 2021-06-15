@@ -2,7 +2,7 @@ from os.path import join, dirname
 
 # PATHS
 BASE_PATH = 'D:\\Facultad\\Proyecto Final de Carrera\\batson-pruebas'
-FACEREC_MODEL_PATH = join(BASE_PATH, 'src\\actor_recognition_module\\models\\encodings.pickle')
+FACEREC_MODEL_PATH = join(BASE_PATH, 'src\\actor_recognition_module\\models\\encodings_506.pickle')
 DATASET_PATH = join(BASE_PATH, 'resources\\dataset')
 TEST_FOLDER_PATH = join(BASE_PATH, 'resources\\test')
 

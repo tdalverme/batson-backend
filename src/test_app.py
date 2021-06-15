@@ -4,11 +4,12 @@ import base64
 import time
 import os
 import requests
+import json
 from actor_recognition_module.util import constant
 
 #############################################################################
 
-file_path = os.path.join(constant.TEST_FOLDER_PATH, 'paul_bettany_vision.jpg')
+file_path = os.path.join(constant.TEST_FOLDER_PATH, 'avengers_vision.mp4')
 
 #############################################################################
 
@@ -30,4 +31,10 @@ start = time.time()
 res = requests.post(url, files=files)
 print("%.2f" % (time.time() - start), " seconds")
 
-print(res.text)
+if file_path.rsplit('.')[1] == 'mp4':
+    data = json.loads(res.text)
+
+    for k, v in data.items():
+        print(k, ": ", v)
+else:
+    print(res.text)
